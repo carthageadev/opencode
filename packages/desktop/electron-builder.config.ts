@@ -57,7 +57,7 @@ const APP_IDS = {
 } as const
 
 const getBase = (appId: string): Configuration => ({
-  artifactName: "opencode-desktop-${os}-${arch}.${ext}",
+  artifactName: channel === "beta" ? "opencode-beta-${os}-${arch}.${ext}" : "opencode-desktop-${os}-${arch}.${ext}",
   directories: {
     output: "dist",
     buildResources: "resources",
@@ -132,7 +132,7 @@ const getBase = (appId: string): Configuration => ({
   },
   nsis: {
     include: path.join(packageDir, "resources", "windows", "installer.nsh"),
-    oneClick: true,
+    oneClick: channel !== "beta",
     perMachine: false,
     installerIcon: `resources/icons/icon.ico`,
     installerHeaderIcon: `resources/icons/icon.ico`,
