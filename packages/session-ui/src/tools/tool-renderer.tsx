@@ -51,6 +51,7 @@ import {
   executeToolFailed,
 } from "../message/current-tool-state"
 import { AssistantReasoningContent, writeClipboard } from "../message/message-content"
+import { browserExecuteCall, browserToolInfo } from "./browser-tool-label"
 
 function ShellSubmessage(props: { text: string; animate?: boolean }) {
   let widthRef: HTMLSpanElement | undefined
@@ -355,6 +356,12 @@ export function getToolInfo(
         subtitle: typeof input.command === "string" ? input.command : undefined,
       }
     case "execute":
+      if (browserExecuteCall(metadata)) {
+        return {
+          icon: "window-cursor",
+          title: i18n.t("ui.tool.browser"),
+        }
+      }
       return {
         icon: "console",
         title: i18n.t("ui.tool.execute"),
@@ -1530,22 +1537,39 @@ ToolRegistry.register({
     const pending = () => props.status === "streaming" || props.status === "running"
     const code = createMemo(() => (typeof props.input.code === "string" ? props.input.code : ""))
     const output = createMemo(() => stripAnsi(props.output ?? "").replace(/\r\n?/g, "\n"))
+    const browser = createMemo(() => browserToolInfo(props.metadata, output(), i18n))
     const sawPending = pending()
     return (
       <BasicTool
         {...props}
-        icon="console"
+        icon={browser()?.icon ?? "console"}
         rail={false}
         compact
         allowOpenWhilePending
         trigger={(open) => (
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">
-              <span data-slot="basic-tool-tool-title">
-                <TextShimmer text={i18n.t("ui.tool.execute")} active={pending()} />
-              </span>
-              <Show when={!open() && code()}>
-                <ShellSubmessage text={code().split("\n")[0]} animate={sawPending} />
+              <Show
+                when={browser()}
+                fallback={
+                  <>
+                    <span data-slot="basic-tool-tool-title">
+                      <TextShimmer text={i18n.t("ui.tool.execute")} active={pending()} />
+                    </span>
+                    <Show when={!open() && code()}>
+                      <ShellSubmessage text={code().split("\n")[0]} animate={sawPending} />
+                    </Show>
+                  </>
+                }
+              >
+                {(info) => (
+                  <>
+                    <Icon name={info().icon} size="small" class="shrink-0 text-v2-icon-icon-muted" />
+                    <span data-slot="basic-tool-tool-title">
+                      <TextShimmer text={info().title} active={pending()} />
+                    </span>
+                  </>
+                )}
               </Show>
             </div>
           </div>
