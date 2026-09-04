@@ -1,6 +1,7 @@
 import { app } from "electron"
 import { Context, Effect, FileSystem, Layer, Path } from "effect"
 import type { ServerReadyData } from "../../shared/ipc-contract"
+import { CHANNEL } from "../constants"
 import { BackgroundServiceState } from "./background-service-state"
 import { cleanStages, DesktopCli } from "./desktop-cli"
 
@@ -41,6 +42,12 @@ const connect = Effect.fn("BackgroundService.connect")(function* (mode: "initial
       file:
         isolated && process.env.OPENCODE_DESKTOP_SERVER_CHANNEL === "local"
           ? path.join(app.getPath("userData"), "opencode", "service-local.json")
+          : CHANNEL === "prod"
+            ? path.join(
+                process.env["XDG_STATE_HOME"] ?? path.join(app.getPath("home"), ".local", "state"),
+                "opencode",
+                "service-prod.json",
+              )
           : undefined,
       version,
       command: [...cli.command, "serve", "--service", ...(isolated ? ["--port", "0"] : [])],
