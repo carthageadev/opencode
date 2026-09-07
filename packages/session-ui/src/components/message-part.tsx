@@ -65,6 +65,7 @@ import { partDefaultOpen } from "./part-default-open"
 import { animate } from "motion"
 import { attached, inline, kind, typeLabel } from "./message-file"
 import { readPartText } from "./message-part-text"
+import { browserToolInfo } from "./browser-tool-label"
 import { SessionProgressIndicatorV2 } from "../v2/components/session-progress-indicator-v2"
 
 async function writeClipboard(text: string): Promise<boolean> {
@@ -2078,6 +2079,80 @@ ToolRegistry.register({
         onTriggerClick={navigate}
         onTriggerKeyDown={navigateKey}
       />
+    )
+  },
+})
+
+ToolRegistry.register({
+  name: "execute",
+  render(props) {
+    const i18n = useI18n()
+    const pending = () => props.status === "pending" || props.status === "running"
+    const code = createMemo(() => (typeof props.input.code === "string" ? props.input.code : ""))
+    const output = createMemo(() => stripAnsi(props.output ?? "").replace(/\r\n?/g, "\n"))
+    const browser = createMemo(() => browserToolInfo(props.metadata, output(), i18n))
+    const sawPending = pending()
+
+    return (
+      <BasicTool
+        {...props}
+        icon={browser()?.icon ?? "console"}
+        allowOpenWhilePending
+        trigger={(open) => (
+          <div data-slot="basic-tool-tool-info-structured">
+            <div data-slot="basic-tool-tool-info-main">
+              <Show
+                when={browser()}
+                fallback={
+                  <>
+                    <span data-slot="basic-tool-tool-title">
+                      <TextShimmer text={i18n.t("ui.tool.execute")} active={pending()} />
+                    </span>
+                    <Show when={!open() && code()}>
+                      <ShellSubmessage text={code().split("\n")[0]!} animate={sawPending} />
+                    </Show>
+                  </>
+                }
+              >
+                {(info) => (
+                  <>
+                    <Icon name={info().icon} size="small" class="shrink-0 text-v2-icon-icon-muted" />
+                    <span data-slot="basic-tool-tool-title">
+                      <TextShimmer text={info().title} active={pending()} />
+                    </span>
+                  </>
+                )}
+              </Show>
+            </div>
+          </div>
+        )}
+      >
+        <Show when={code() || output()}>
+          <div data-component="bash-output" dir="ltr">
+            <div
+              data-slot="bash-scroll"
+              data-scrollable
+              tabIndex={0}
+              role="region"
+              aria-label={i18n.t("ui.scrollView.ariaLabel")}
+            >
+              <pre data-slot="bash-pre">
+                <code>
+                  {code()}
+                  <Show when={output()}>
+                    {(value) => (
+                      <>
+                        {code() ? "\n\n" : ""}
+                        {value()}
+                      </>
+                    )}
+                  </Show>
+                </code>
+              </pre>
+            </div>
+          </div>
+        </Show>
+      </BasicTool>
     )
   },
 })
